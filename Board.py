@@ -2,10 +2,10 @@ import numpy as np
 import itertools as it
 
 # unrevealed
-# 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+# 0, 1, 2, 3, 4, 5, 6, 7, 8
 # revealed
-# 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-# bomb = -1
+# 10, 11, 12, 13, 14, 15, 16, 17, 18
+# unrevealed bomb = -1, revealed bomb = -2 
 class Board:
 
     # https://www.reddit.com/r/Minesweeper/comments/mdbequ/what_is_a_good_mine_ratio/
@@ -16,6 +16,8 @@ class Board:
         self.y = y
         self.mine_percentage = mine_percentage
         self.grid = np.zeros((self.x, self.y), dtype=int)
+
+        self.revealed = 0
 
     # prints raw info
     def print_grid(self):
@@ -71,7 +73,29 @@ class Board:
                 self.grid[x + a, y + b] += 1
 
     def rl_return(self):
-        return 0
+        # if cell is between 1 and 8, it shows the number of adjacent mines
+        # if cell is 0, it shows that there are no adjacent mines
+        # if cell is -1, it shows that this cell has not been revealed yet
+        # if cell is -2, it shows that there was a revealed mine
+
+        # returns the unrevealed board as a numpy array
+        ret = self.grid.copy()
+        
+        for i in range(self.x):
+            for j in range(self.y):
+                # self.print_grid()
+                # print(i, j)
+                if ret[i, j] > 10:
+                    # shows the number of mines around it
+                    ret[i, j] = ret[i, j] % 10
+                elif ret[i, j] == -2:
+                    # if bomb revealed, show it
+                    ret[i, j] = -2
+                else:
+                    # dont show unrevealed cells
+                    ret[i, j] = -1
+        
+        return ret
 
     def check_bounds(self, x, y):
         if (0 <= x < self.x) and (0 <= y < self.y):
@@ -98,14 +122,25 @@ class Board:
             self.place_mines(loc)
 
         if self.grid[x, y] == -1:
-            return "LOSE"
+            # hit a mine, you lose
+            # print("LOST")
+            return "LOST"
         else:
             self.reveal(x, y)
-            return "GRUH"
+
+            # check if number of revealed cells is equal to the number of cells minus the number of mines
+            mine_count = int(self.x * self.y * self.mine_percentage)
+            if np.count_nonzero(self.grid > 10) == self.x * self.y - np.count_nonzero(mine_count):
+                # print("WON")
+                return "WON"
+            # continue
+            # print("CONTINUE")
+            return "CONT"
 
     def reveal(self, x, y):
         if self.grid[x, y] < 10:
             self.grid[x, y] += 10
+            self.revealed += 1
             if self.grid[x, y] > 10:
                 return
         else:
